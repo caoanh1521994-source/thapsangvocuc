@@ -15,6 +15,7 @@
 const SHEET = 'DenSang';
 const HEAD = ['Thời gian', 'Tên', 'Lớp', 'Lời nhắn', 'Số phút học', 'Mã máy', 'Ẩn'];
 const SHOW = 300;                 // số lời nhắn mới nhất gửi về trang
+const BOARD = 200;                // số bạn trong bảng "Chăm học nhất"
 const BAD = ['địt','đụ','lồn','cặc','đéo','vcl','óc chó','chó chết'];
 
 function sheet_() {
@@ -32,7 +33,7 @@ function today_() { return Utilities.formatDate(new Date(), 'Asia/Ho_Chi_Minh', 
 
 function read_() {
   const s = sheet_(), last = s.getLastRow();
-  if (last < 2) return { total: 0, minutes: 0, lights: [], byClass: {} };
+  if (last < 2) return { total: 0, minutes: 0, lights: [], byClass: {}, board: [] };
   const v = s.getRange(2, 1, last - 1, HEAD.length).getValues();
   const byClass = {}; let minutes = 0;
   v.forEach(r => { if (r[2]) byClass[r[2]] = (byClass[r[2]] || 0) + 1; minutes += Number(r[4]) || 0; });
@@ -43,7 +44,16 @@ function read_() {
     const hidden = r[6] === true || String(r[6]).toUpperCase() === 'TRUE', d = Number(r[4]) || 0;
     lights.push(hidden ? { n: 'Một bạn nhỏ', c: r[2], m: '✨', d: d, t: r[0] } : { n: r[1], c: r[2], m: r[3], d: d, t: r[0] });
   }
-  return { total: v.length, minutes: minutes, lights: lights, byClass: byClass };
+  // bảng "Chăm học nhất": gộp theo mã máy, lấy tên + lớp của lần thắp gần nhất chưa bị ẩn (mã máy không gửi ra ngoài)
+  const g = {};
+  v.forEach(r => {
+    const key = String(r[5] || r[1] + '|' + r[2]), hidden = r[6] === true || String(r[6]).toUpperCase() === 'TRUE';
+    const o = g[key] || (g[key] = { n: 'Một bạn nhỏ', c: r[2], k: 0, d: 0 });
+    o.k++; o.d += Number(r[4]) || 0;
+    if (!hidden) { o.n = r[1]; o.c = r[2]; }
+  });
+  const board = Object.keys(g).map(x => g[x]).sort((a, b) => b.d - a.d || b.k - a.k).slice(0, BOARD);
+  return { total: v.length, minutes: minutes, lights: lights, byClass: byClass, board: board };
 }
 
 function doGet() {

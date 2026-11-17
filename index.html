@@ -59,6 +59,29 @@ input:focus,select:focus,textarea:focus{border-color:var(--tim);box-shadow:0 0 0
   background:linear-gradient(90deg,var(--cam),var(--cam2));box-shadow:0 8px 20px rgba(241,90,41,.3);display:flex;align-items:center;justify-content:center;gap:10px}
 .btn:disabled{background:#CFC6DC;box-shadow:none;cursor:default}
 .btn:focus-visible,.chips button:focus-visible{outline:3px solid var(--tim);outline-offset:2px}
+.board{margin:0 0 10px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 12px}
+.tabs button{font:inherit;font-size:14px;min-height:40px;border:1.5px solid #E2D8F1;background:#fff;color:var(--tim);border-radius:99px;padding:6px 16px;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--tim);border-color:var(--tim);color:#fff;font-weight:600}
+.tabs button:focus-visible{outline:3px solid var(--cam2);outline-offset:2px}
+.filters{display:grid;grid-template-columns:1fr 170px;gap:10px;margin-bottom:10px}
+@media (max-width:480px){.filters{grid-template-columns:1fr}}
+.tbl-wrap{overflow-x:auto;border-radius:14px;border:1px solid #EEE7F7}
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px}
+.tbl th{background:#F6F1FC;color:var(--tim-dam);text-align:left;font-weight:600;padding:10px 12px;white-space:nowrap}
+.tbl td{padding:10px 12px;border-top:1px solid #F0EAF8;vertical-align:top}
+.tbl tr:nth-child(even) td{background:#FCFAFF}
+.tbl .num{text-align:right;white-space:nowrap}
+.tbl .rk{width:42px;text-align:center;font-weight:700;color:var(--tim)}
+.tbl .nm b{color:var(--tim-dam)}
+.tbl .nm small{color:var(--mo)}
+.tbl .ms{display:block;margin-top:2px;color:var(--chu);font-size:13.5px}
+.tbl .tm{white-space:nowrap;color:var(--mo);font-size:13px}
+.tbl-empty{padding:18px;text-align:center;color:var(--mo)}
+.more{display:block;margin:10px auto 0;font:inherit;font-size:14px;min-height:40px;border:1.5px solid #E2D8F1;background:#fff;color:var(--tim);border-radius:99px;padding:6px 20px;cursor:pointer}
+.more[hidden]{display:none}
+.tbl-foot{font-size:12.5px;color:var(--mo);margin-top:8px;text-align:right}
+@media (max-width:480px){.tbl th,.tbl td{padding:9px 8px}.tbl .hide-m{display:none}.tbl .nm small{display:block;font-size:12.5px}.tabs{gap:6px;flex-wrap:nowrap}.tabs button{font-size:13px;padding:6px 11px}}
 .note{font-size:13px;color:var(--mo);margin:10px 0 0;text-align:center}
 .msg{margin-top:12px;padding:12px 14px;border-radius:14px;font-size:14.5px;display:none}
 .msg.ok{display:block;background:#F2ECFB;color:var(--tim-dam)}
@@ -149,6 +172,22 @@ footer{text-align:center;color:var(--mo);font-size:13px;margin:18px 0 6px}
       <ul class="feed" id="feed"><li class="empty">Chưa có ngọn đèn nào. Em hãy là người thắp đầu tiên nhé!</li></ul>
     </div>
   </section>
+
+  <section class="card board" aria-labelledby="bh">
+    <h2 id="bh">Bảng những người đã thắp đèn</h2>
+    <p class="sub">Cảm ơn từng bạn nhỏ đã góp ánh sáng cho dải ∞ 💜🧡</p>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tabTop" aria-selected="true">🏆 Chăm học nhất</button>
+      <button type="button" role="tab" id="tabAll" aria-selected="false">📋 Tất cả lượt thắp</button>
+    </div>
+    <div class="filters">
+      <input id="q" type="search" placeholder="🔍 Tìm tên của em…" aria-label="Tìm theo tên">
+      <select id="fcls" aria-label="Lọc theo lớp"><option value="">Tất cả các lớp</option></select>
+    </div>
+    <div class="tbl-wrap"><table class="tbl" id="tbl"></table></div>
+    <button type="button" class="more" id="more" hidden>Xem thêm ▾</button>
+    <div class="tbl-foot" id="tblFoot"></div>
+  </section>
   <footer>KioMath · Học tập không có điểm cuối – sáng tạo là vô hạn</footer>
 </div>
 
@@ -237,8 +276,37 @@ function render(){
     :'<li class="empty">Chưa có ngọn đèn nào. Em hãy là người thắp đầu tiên nhé!</li>';
   if(justLit){const el=g.querySelector('.light[data-k="0"]');if(el)setTimeout(()=>{showTip(el);setTimeout(()=>tip.classList.remove('on'),5000)},600)}
   justLit=false;
+  renderBoard();
 }
 let justLit=false;
+/* ===== Bảng người thắp đèn ===== */
+let tab='top', lim=20;
+const medal=i=>i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1;
+function boardData(){ // ưu tiên bảng do máy chủ gộp theo máy; không có thì gộp theo tên + lớp
+  if(Array.isArray(state.board))return state.board;
+  const m={};state.lights.forEach(L=>{const k=(L.n||'')+'|'+(L.c||'');const o=m[k]||(m[k]={n:L.n,c:L.c,k:0,d:0,t:L.t});o.k++;o.d+=(+L.d||0)});
+  return Object.values(m).sort((a,b)=>b.d-a.d||b.k-a.k);
+}
+function renderBoard(){
+  const q=clean($('q').value).toLowerCase(), fc=$('fcls').value, T=$('tbl');
+  const ok=x=>(!fc||x.c===fc)&&(!q||String(x.n||'').toLowerCase().includes(q));
+  if(tab==='top'){
+    const all=boardData(), list=all.map((x,i)=>({...x,r:i})).filter(ok), rows=list.slice(0,lim);
+    T.innerHTML=`<thead><tr><th class="rk">#</th><th>Tên</th><th class="num">Số đèn</th><th class="num">Tổng giờ học</th></tr></thead><tbody>`+
+      (rows.length?rows.map(x=>`<tr><td class="rk">${medal(x.r)}</td><td class="nm"><b>${esc(x.n||'Một bạn nhỏ')}</b> <small><span class="hide-m">· </span>${esc(x.c||'')}</small></td><td class="num">${x.k} ✨</td><td class="num">${dur(x.d)||'–'}</td></tr>`).join('')
+        :`<tr><td colspan="4" class="tbl-empty">Chưa có bạn nào${q||fc?' khớp với tìm kiếm':''}.</td></tr>`)+'</tbody>';
+    $('more').hidden=list.length<=lim;
+    $('tblFoot').textContent=all.length?`Xếp theo tổng thời gian học · ${all.length.toLocaleString('vi-VN')} bạn đã thắp đèn`:'';
+  }else{
+    const tot=state.total||0, list=state.lights.map((L,k)=>({...L,i:tot-k})).filter(ok), rows=list.slice(0,lim);
+    T.innerHTML=`<thead><tr><th class="rk">STT</th><th>Tên · lời nhắn</th><th class="num">Học</th><th class="hide-m">Thắp lúc</th></tr></thead><tbody>`+
+      (rows.length?rows.map(x=>`<tr><td class="rk">${x.i}</td><td class="nm"><b>${esc(x.n||'Một bạn nhỏ')}</b> <small><span class="hide-m">· </span>${esc(x.c||'')}</small><span class="ms">${esc(x.m)}</span></td><td class="num">${dur(x.d)||'–'}</td><td class="tm hide-m">${when(x.t)}</td></tr>`).join('')
+        :`<tr><td colspan="4" class="tbl-empty">Chưa có lượt thắp nào${q||fc?' khớp với tìm kiếm':''}.</td></tr>`)+'</tbody>';
+    $('more').hidden=list.length<=lim;
+    $('tblFoot').textContent=tot>state.lights.length?`Hiện ${state.lights.length} lượt thắp mới nhất / ${tot.toLocaleString('vi-VN')} lượt`:'';
+  }
+}
+function setTab(t){tab=t;lim=20;$('tabTop').setAttribute('aria-selected',t==='top');$('tabAll').setAttribute('aria-selected',t==='all');renderBoard()}
 function dur(m){m=Math.round(+m||0);if(!m)return'';const h=Math.floor(m/60),r=m%60;return h?(h+' giờ'+(r?' '+r+' phút':'')):r+' phút'}
 function when(t){if(!t)return'';const d=new Date(t);if(isNaN(d))return'';const o={timeZone:'Asia/Ho_Chi_Minh'};
   return d.toLocaleTimeString('vi-VN',{...o,hour:'2-digit',minute:'2-digit',hour12:false})+' · '+d.toLocaleDateString('vi-VN',{...o,day:'2-digit',month:'2-digit',year:'numeric'})}
@@ -257,7 +325,9 @@ document.addEventListener('click',e=>{if(!e.target.closest('.light'))tip.classLi
 
 /* ===== Biểu mẫu ===== */
 const $=id=>document.getElementById(id);
-CLASSES.forEach(c=>$('cls').insertAdjacentHTML('beforeend',`<option>${c}</option>`));
+CLASSES.forEach(c=>{$('cls').insertAdjacentHTML('beforeend',`<option>${c}</option>`);$('fcls').insertAdjacentHTML('beforeend',`<option>${c}</option>`)});
+$('tabTop').onclick=()=>setTab('top');$('tabAll').onclick=()=>setTab('all');
+$('q').addEventListener('input',()=>{lim=20;renderBoard()});$('fcls').addEventListener('change',()=>{lim=20;renderBoard()});$('more').onclick=()=>{lim+=20;renderBoard()};
 IDEAS.forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t;b.onclick=()=>{$('msg').value=t;$('len').textContent=t.length;$('msg').focus()};$('ideas').appendChild(b)});
 let pick=0;
 DURS.forEach(([v,t])=>{const b=document.createElement('button');b.type='button';b.textContent=t;b.dataset.v=v;b.setAttribute('aria-pressed','false');b.onclick=()=>{pick=v;$('dur').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b))};$('dur').appendChild(b)});
@@ -281,7 +351,7 @@ async function light(){
     if(LIGHT_API){
       const r=await fetch(LIGHT_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({name:n,cls:c,msg:m,mins:pick,did:deviceId()})});
       const d=await r.json(); if(!d.ok) throw new Error(d.error||'loi');
-      state.total=d.total||state.total+1; state.minutes=d.minutes||(state.minutes||0)+pick; state.lights.unshift(item); state.byClass[c]=(state.byClass[c]||0)+1;
+      state.total=d.total||state.total+1; state.minutes=d.minutes||(state.minutes||0)+pick; state.board=null; setTimeout(load,2500); state.lights.unshift(item); state.byClass[c]=(state.byClass[c]||0)+1;
     }else{ l.mine=(l.mine||[]).concat([item]); state.total++; state.minutes=(state.minutes||0)+pick; state.lights.unshift(item); state.byClass[c]=(state.byClass[c]||0)+1; }
     l.day=today();l.name=n;l.cls=c;saveLocal(l);
     justLit=true;render();
