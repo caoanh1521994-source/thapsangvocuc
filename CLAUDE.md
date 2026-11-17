@@ -7,4 +7,4 @@
 - Thời gian học: học sinh bắt buộc chọn 1 nút trong `DURS` (15 phút … 2 giờ trở lên); đèn học lâu sáng to hơn (hệ số `sc`), dưới bộ đếm hiện tổng thời gian cả nhà đã học.
 - Mỗi máy 1 đèn/ngày: kiểm ở trình duyệt (localStorage `thapsang-v1`) và ở Apps Script (mã máy + ngày giờ VN).
 - Mọi giá trị từ trình duyệt đều cắt độ dài ở cả hai phía; lời nhắn hiển thị qua `esc()`.
-- Bảng "Bảng những người đã thắp đèn" (cuối trang): tab 🏆 Chăm học nhất dùng `state.board` (Apps Script gộp theo mã máy, xếp theo tổng phút học, tối đa `BOARD`=200; bản thử gộp theo tên + lớp) và tab 📋 Tất cả lượt thắp dùng `state.lights`; có ô tìm tên và lọc lớp. Mã máy không bao giờ gửi ra trình duyệt.
+- "Bảng xếp hạng" (cuối trang): tab 🏆 Chăm học nhất dùng `state.board` (Apps Script gộp theo mã máy, xếp theo tổng phút học, tối đa `BOARD`=200; bản thử gộp theo tên + lớp) và tab 📋 Tất cả lượt thắp dùng `state.lights`; có ô tìm tên và lọc lớp. Mã máy không bao giờ gửi ra trình duyệt.
