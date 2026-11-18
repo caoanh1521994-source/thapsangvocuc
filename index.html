@@ -82,6 +82,28 @@ table.tbl{width:100%;border-collapse:collapse;font-size:14.5px}
 .more[hidden]{display:none}
 .tbl-foot{font-size:12.5px;color:var(--mo);margin-top:8px;text-align:right}
 @media (max-width:480px){.tbl th,.tbl td{padding:9px 8px}.tbl .hide-m{display:none}.tbl .nm small{display:block;font-size:12.5px}.tabs{gap:6px;flex-wrap:nowrap}.tabs button{font-size:13px;padding:6px 11px}}
+.streak{background:linear-gradient(135deg,#FFF1E3,#F3ECFF);border:1px solid #F1E2F5;border-radius:18px;padding:14px 16px;margin:0 0 6px}
+.streak .top{display:flex;align-items:center;gap:12px}
+.streak .fire{font-size:34px;line-height:1;filter:drop-shadow(0 3px 6px rgba(241,90,41,.35))}
+.streak .fire.off{filter:grayscale(1);opacity:.45}
+.streak .big{font-size:20px;font-weight:700;color:var(--tim-dam)}
+.streak .big b{color:#E0640E;font-size:26px}
+.streak .sm{font-size:13px;color:var(--mo);margin-top:2px}
+.week{display:flex;justify-content:space-between;gap:4px;margin-top:12px}
+.week .d{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;color:var(--mo)}
+.week .d i{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:16px;background:#fff;border:2px solid #E7DEF3}
+.week .d.on i{background:linear-gradient(135deg,#FFB46A,#F15A29);border-color:#F37103;color:#fff}
+.week .d.fix i{background:#EDE2FF;border-color:#9B74DD}
+.week .d.now i{border-style:dashed;border-color:var(--cam2)}
+.week .d.now small{color:var(--cam);font-weight:600}
+.restore{margin-top:12px;background:#fff;border-radius:14px;padding:12px;border:1.5px dashed #9B74DD;font-size:14px;color:var(--chu)}
+.restore[hidden]{display:none}
+.restore .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.restore button{font:inherit;font-size:14px;min-height:42px;border-radius:12px;padding:6px 14px;cursor:pointer;border:1.5px solid var(--tim)}
+.restore .yes{background:var(--tim);color:#fff;font-weight:600}
+.restore .no{background:#fff;color:var(--tim)}
+.restore button:focus-visible{outline:3px solid var(--cam2);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .note{font-size:13px;color:var(--mo);margin:10px 0 0;text-align:center}
 .msg{margin-top:12px;padding:12px 14px;border-radius:14px;font-size:14.5px;display:none}
 .msg.ok{display:block;background:#F2ECFB;color:var(--tim-dam)}
@@ -148,6 +170,14 @@ footer{text-align:center;color:var(--mo);font-size:13px;margin:18px 0 6px}
     <div class="card">
       <h2>Thắp ngọn đèn của em</h2>
       <p class="sub">Chỉ mất khoảng 10 giây ✨</p>
+      <div class="streak" id="streak" aria-live="polite">
+        <div class="top"><div class="fire" id="sFire">🔥</div><div><div class="big" id="sBig"></div><div class="sm" id="sSm"></div></div></div>
+        <div class="week" id="sWeek"></div>
+        <div class="restore" id="sFix" hidden>
+          <div id="sFixTxt"></div>
+          <div class="acts"><button type="button" class="yes" id="sYes">♻️ Khôi phục chuỗi</button><button type="button" class="no" id="sNo">Bắt đầu chuỗi mới</button></div>
+        </div>
+      </div>
       <form id="f" autocomplete="off">
         <div class="row">
           <div><label for="name">Tên hoặc biệt danh</label><input id="name" maxlength="30" placeholder="VD: Minh Anh"></div>
@@ -198,6 +228,7 @@ const GOAL = 2026;             // mục tiêu số ngọn đèn
 const CLASSES = ['Lớp 1','Lớp 2','Lớp 3','Lớp 4','Lớp 5','Lớp 6','Lớp 7','Lớp 8','Lớp 9','Lớp 10','Lớp 11','Lớp 12'];
 const IDEAS = ['Em đã giải được một bài khó 💪','Em hiểu thêm một công thức mới','Em đã sửa được lỗi sai của mình','Em giúp bạn hiểu bài'];
 const LS = 'thapsang-v1';
+const RESTORES = 2;            // số lượt khôi phục chuỗi của mỗi em (mỗi lượt bù 1 ngày lỡ)
 const DURS = [[15,'15 phút'],[30,'30 phút'],[45,'45 phút'],[60,'1 giờ'],[90,'1,5 giờ'],[120,'2 giờ trở lên']];
 
 /* ===== Hình dải ∞ ===== */
@@ -332,8 +363,43 @@ IDEAS.forEach(t=>{const b=document.createElement('button');b.type='button';b.tex
 let pick=0;
 DURS.forEach(([v,t])=>{const b=document.createElement('button');b.type='button';b.textContent=t;b.dataset.v=v;b.setAttribute('aria-pressed','false');b.onclick=()=>{pick=v;$('dur').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b))};$('dur').appendChild(b)});
 $('msg').addEventListener('input',()=>$('len').textContent=$('msg').value.length);
-(()=>{const l=local();if(l.name)$('name').value=l.name;if(l.cls)$('cls').value=l.cls;lockIfDone()})();
+/* ===== Chuỗi thắp đèn ===== */
+const dn=s=>{const [y,m,d]=String(s).split('-').map(Number);return Math.round(Date.UTC(y,m-1,d)/864e5)};
+const ds=n=>{const d=new Date(n*864e5);return d.getUTCFullYear()+'-'+(d.getUTCMonth()+1)+'-'+d.getUTCDate()};
+const dmy=n=>{const d=new Date(n*864e5);return d.getUTCDate()+'/'+(d.getUTCMonth()+1)};
+function streakInfo(){
+  const l=local(), T=dn(today());
+  const lit=new Set((l.days||(l.day?[l.day]:[])).map(dn)), fix=new Set((l.fixed||[]).map(dn)), has=n=>lit.has(n)||fix.has(n);
+  const run=e=>{let k=0;while(has(e-k))k++;return k};
+  const all=[...new Set([...lit,...fix])].sort((a,b)=>a-b);
+  let best=0,cur=0;all.forEach((n,i)=>{cur=i&&n===all[i-1]+1?cur+1:1;best=Math.max(best,cur)});
+  const left=Math.max(0,RESTORES-(+l.used||0));
+  const streak=has(T)?run(T):has(T-1)?run(T-1):0;
+  let last=null,gap=0,prev=0;
+  if(!streak&&all.length){last=all[all.length-1];gap=T-last-1;prev=run(last)}
+  const canFix=!streak&&prev>0&&gap>=1&&gap<=left&&l.drop!==last;
+  return {T,lit,fix,streak,best,left,last,gap,prev,canFix,today:has(T)};
+}
+function renderStreak(){
+  const s=streakInfo(), W=['CN','T2','T3','T4','T5','T6','T7'];
+  $('sFire').className='fire'+(s.streak?'':' off');
+  $('sBig').innerHTML=s.streak?`Chuỗi <b>${s.streak}</b> ngày liên tiếp`:'Chuỗi thắp đèn';
+  const head=s.today?'Hôm nay em đã giữ chuỗi rồi!':s.streak?`Thắp đèn hôm nay để lên ${s.streak+1} ngày nhé!`:s.canFix?'':s.prev?`Chuỗi cũ ${s.prev} ngày đã dừng – thắp hôm nay để bắt đầu lại nhé!`:'Thắp đèn mỗi ngày để giữ chuỗi 🔥';
+  $('sSm').textContent=[head,[s.best?`Kỷ lục: ${s.best} ngày`:'',`♻️ còn ${s.left}/${RESTORES} lượt khôi phục`].filter(Boolean).join(' · ')].filter(Boolean).join(' ');
+  let w='';for(let n=s.T-6;n<=s.T;n++){const st=s.lit.has(n)?'on':s.fix.has(n)?'fix':n===s.T?'now':'off';
+    w+=`<span class="d ${st}"><i aria-hidden="true">${st==='on'?'🔥':st==='fix'?'♻️':''}</i><small>${n===s.T?'Nay':W[new Date(n*864e5).getUTCDay()]}</small><span class="sr">${dmy(n)}: ${st==='on'?'đã thắp':st==='fix'?'đã khôi phục':n===s.T?'chưa thắp':'không thắp'}</span></span>`}
+  $('sWeek').innerHTML=w;
+  $('sFix').hidden=!s.canFix;
+  if(s.canFix){const days=[];for(let n=s.last+1;n<s.T;n++)days.push(dmy(n));
+    $('sFixTxt').innerHTML=`Ôi, em đã lỡ <b>${s.gap} ngày</b> (${days.join(', ')}) nên chuỗi <b>${s.prev} ngày</b> bị đứt. Dùng <b>${s.gap} lượt khôi phục</b> để giữ chuỗi thành <b>${s.prev+s.gap} ngày</b> nhé? (em còn ${s.left} lượt)`}
+}
+function restoreStreak(){const s=streakInfo();if(!s.canFix)return;const l=local();l.fixed=(l.fixed||[]).slice(-60);
+  for(let n=s.last+1;n<s.T;n++)l.fixed.push(ds(n));l.used=(+l.used||0)+s.gap;saveLocal(l);renderStreak();
+  showMsg('ok',`♻️ Đã khôi phục chuỗi ${s.prev+s.gap} ngày! Giờ em thắp đèn hôm nay để chuỗi lên ${s.prev+s.gap+1} ngày nhé.`)}
+function dropStreak(){const s=streakInfo();const l=local();l.drop=s.last;saveLocal(l);renderStreak();showMsg('ok','Được rồi, hôm nay em bắt đầu một chuỗi mới nhé! 🔥')}
 function lockIfDone(){const l=local();if(l.day===today()){$('go').disabled=true;$('go').textContent='✓ Hôm nay em đã thắp đèn rồi';}}
+(()=>{deviceId();const l=local();if(l.name)$('name').value=l.name;if(l.cls)$('cls').value=l.cls;lockIfDone();renderStreak()})();
+$('sYes').onclick=restoreStreak;$('sNo').onclick=dropStreak;
 function showMsg(k,t){const o=$('out');o.className='msg '+k;o.textContent=t}
 
 $('f').addEventListener('submit',e=>{e.preventDefault();light()});
@@ -344,7 +410,8 @@ async function light(){
   if(m.length<5){showMsg('err','Em viết thêm một chút về điều mình đã học nhé (ít nhất 5 kí tự).');$('msg').focus();return}
   if(!pick){showMsg('err','Em chọn thời gian đã học bài này giúp mình nhé.');$('dur').querySelector('button').focus();return}
   if(isBad(n+' '+m)){showMsg('err','Lời nhắn có từ chưa phù hợp. Em sửa lại cho đẹp nhé!');return}
-  const l=local(); if(l.day===today()){lockIfDone();return}
+  deviceId(); const l=local(); if(l.day===today()){lockIfDone();return}
+  if(streakInfo().canFix){showMsg('err','Chuỗi của em đang bị đứt – em chọn "Khôi phục chuỗi" hoặc "Bắt đầu chuỗi mới" ở khung 🔥 phía trên trước nhé.');$('sYes').focus();return}
   $('go').disabled=true;$('go').textContent='Đang thắp…';
   const item={n:n||'Một bạn nhỏ',c,m,d:pick,t:new Date().toISOString()};
   try{
@@ -353,9 +420,11 @@ async function light(){
       const d=await r.json(); if(!d.ok) throw new Error(d.error||'loi');
       state.total=d.total||state.total+1; state.minutes=d.minutes||(state.minutes||0)+pick; state.board=null; setTimeout(load,2500); state.lights.unshift(item); state.byClass[c]=(state.byClass[c]||0)+1;
     }else{ l.mine=(l.mine||[]).concat([item]); state.total++; state.minutes=(state.minutes||0)+pick; state.lights.unshift(item); state.byClass[c]=(state.byClass[c]||0)+1; }
-    l.day=today();l.name=n;l.cls=c;saveLocal(l);
+    l.days=(l.days||(l.day?[l.day]:[])).filter(x=>x!==today()).concat([today()]).slice(-400);
+    l.day=today();l.name=n;l.cls=c;saveLocal(l);renderStreak();
+    const sk=streakInfo().streak;
     justLit=true;render();
-    showMsg('ok',`Ngọn đèn thứ ${state.total.toLocaleString('vi-VN')} đã sáng trên dải ∞ lúc ${when(item.t)} – em đã học ${dur(pick)}! Cảm ơn ${n||'em'} – học tập không có điểm cuối 💜🧡`);
+    showMsg('ok',`Ngọn đèn thứ ${state.total.toLocaleString('vi-VN')} đã sáng trên dải ∞ lúc ${when(item.t)} – em đã học ${dur(pick)}! 🔥 Chuỗi ${sk} ngày liên tiếp${[3,7,14,21,30,50,100].includes(sk)?' – tuyệt vời!':'.'} Cảm ơn ${n||'em'} – học tập không có điểm cuối 💜🧡`);
     $('msg').value='';$('len').textContent='0';pick=0;$('dur').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed','false'));lockIfDone();
     document.getElementById('stage').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'});
   }catch(err){

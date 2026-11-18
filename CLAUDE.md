@@ -8,3 +8,4 @@
 - Mỗi máy 1 đèn/ngày: kiểm ở trình duyệt (localStorage `thapsang-v1`) và ở Apps Script (mã máy + ngày giờ VN).
 - Mọi giá trị từ trình duyệt đều cắt độ dài ở cả hai phía; lời nhắn hiển thị qua `esc()`.
 - "Bảng xếp hạng" (cuối trang): tab 🏆 Chăm học nhất dùng `state.board` (Apps Script gộp theo mã máy, xếp theo tổng phút học, tối đa `BOARD`=200; bản thử gộp theo tên + lớp) và tab 📋 Tất cả lượt thắp dùng `state.lights`; có ô tìm tên và lọc lớp. Mã máy không bao giờ gửi ra trình duyệt.
+- Chuỗi thắp đèn (khung 🔥 trong thẻ "Thắp ngọn đèn của em"): tính hoàn toàn ở trình duyệt từ localStorage `thapsang-v1` (`days` các ngày đã thắp, `fixed` các ngày được khôi phục, `used` số lượt đã dùng, `drop` ngày cuối của chuỗi em đã bỏ). Mỗi em có `RESTORES`=2 lượt khôi phục cho cả phong trào, mỗi lượt bù 1 ngày lỡ; chuỗi đứt mà còn đủ lượt thì phải chọn "Khôi phục chuỗi" hoặc "Bắt đầu chuỗi mới" trước khi thắp. Apps Script không liên quan đến chuỗi.
